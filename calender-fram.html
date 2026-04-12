@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Calendar Sync — Daily Routine Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --accent: #5b8ef0;
+    --accent2: #3fd6a0;
+    --accent3: #f06b5b;
+    --text: #f0eeea;
+    --muted: #888884;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+  .auth-status { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .dot.live { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+  main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .section { margin-bottom: 2rem; }
+  h2 { font-size: 0.7rem; font-family: var(--mono); color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; }
+
+  .setup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .setup-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.7; margin-bottom: 1rem; }
+  .setup-card a { color: var(--accent); }
+  .field-label { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; display: block; }
+
+  input[type="text"], input[type="date"], input[type="time"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    padding: 9px 12px;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input::placeholder { color: #555; }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s, transform 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+  .btn-danger { background: transparent; color: var(--accent3); border: 1px solid rgba(240,107,91,0.3); padding: 6px 10px; font-size: 0.78rem; }
+  .btn-danger:hover { background: rgba(240,107,91,0.08); opacity: 1; }
+  .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+  .btn-green { background: var(--accent2); color: #0d1a14; }
+
+  .row-head { display: grid; grid-template-columns: 2.5fr 1.2fr 1fr 1fr 36px; gap: 8px; margin-bottom: 4px; }
+  .row-head span { font-family: var(--mono); font-size: 0.67rem; color: var(--muted); padding-left: 2px; }
+  .event-row { display: grid; grid-template-columns: 2.5fr 1.2fr 1fr 1fr 36px; gap: 8px; margin-bottom: 6px; align-items: center; }
+  .event-row input { margin: 0; }
+
+  .result-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 6px; font-size: 0.85rem; }
+  .result-title { flex: 1; font-weight: 600; }
+  .result-time { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+  .badge { font-family: var(--mono); font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; }
+  .badge-ok { background: rgba(63,214,160,0.12); color: var(--accent2); border: 1px solid rgba(63,214,160,0.25); }
+  .badge-fail { background: rgba(240,107,91,0.12); color: var(--accent3); border: 1px solid rgba(240,107,91,0.25); }
+  .badge-skip { background: rgba(136,136,132,0.12); color: var(--muted); border: 1px solid var(--border); }
+  .badge-warn { background: rgba(240,180,50,0.12); color: #f0b432; border: 1px solid rgba(240,180,50,0.25); }
+
+  .progress-wrap { background: var(--surface2); border-radius: 4px; height: 4px; overflow: hidden; margin: 10px 0; }
+  .progress-fill { height: 100%; background: var(--accent2); border-radius: 4px; transition: width 0.35s ease; }
+
+  .steps { list-style: none; counter-reset: steps; }
+  .steps li { counter-increment: steps; position: relative; padding: 0.5rem 0 0.5rem 2rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6; border-left: 1px solid var(--border); margin-left: 0.6rem; }
+  .steps li:last-child { border-left: 1px solid transparent; }
+  .steps li::before { content: counter(steps); position: absolute; left: -0.75rem; top: 0.5rem; width: 1.4rem; height: 1.4rem; background: var(--surface2); border: 1px solid var(--border2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 0.68rem; color: var(--accent); }
+  .steps li a { color: var(--accent); }
+  .steps li code { font-family: var(--mono); background: var(--surface2); padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; color: var(--text); border: 1px solid var(--border); }
+
+  .info-strip { background: rgba(91,142,240,0.08); border: 1px solid rgba(91,142,240,0.2); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: rgba(91,142,240,0.9); line-height: 1.6; margin-bottom: 1rem; }
+  .info-strip a { color: var(--accent); }
+  .success-strip { background: rgba(63,214,160,0.08); border: 1px solid rgba(63,214,160,0.2); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: var(--accent2); margin-bottom: 1rem; }
+
+  .hidden { display: none !important; }
+  .gap8 { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  .stats { display: flex; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; }
+  .stat-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-bottom: 2px; }
+  .stat-value { font-size: 1.4rem; font-weight: 700; }
+  .stat-value.green { color: var(--accent2); }
+  .stat-value.red { color: var(--accent3); }
+  .stat-value.blue { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">cal<span>sync</span></div>
+  <div class="auth-status">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">not connected</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="section" id="section-setup">
+    <h2>01 — Setup</h2>
+    <div class="setup-card">
+      <p>Enter your Google OAuth 2.0 Client ID to connect this app directly to your Google Calendar.</p>
+
+      <div class="info-strip">
+        <strong>Don't have a Client ID?</strong> Follow these steps:
+        <ol class="steps" style="margin-top:8px;">
+          <li>Open <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> and create a project.</li>
+          <li>Go to APIs &amp; Services → Library and enable Google Calendar API.</li>
+          <li>Go to APIs &amp; Services → OAuth consent screen → External → fill app name → Save.</li>
+          <li>Go to Credentials → Create Credentials → OAuth Client ID → Web application.</li>
+          <li>Under Authorized JavaScript origins add: http://localhost</li>
+          <li>Copy the Client ID and paste it below.</li>
+        </ol>
+      </div>
+
+      <label class="field-label">Google OAuth Client ID</label>
+      <input type="text" id="client-id" placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com" style="margin-bottom:14px;" />
+      <div id="auth-msg" style="margin-top:10px; font-size:0.82rem; color:var(--muted);"></div>
+      <div class="gap8" style="margin-top:0;">
+        <button class="btn btn-accent" onclick="signIn()">Connect Google Account</button>
+        <button class="btn btn-ghost btn-sm hidden" id="btn-signout" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section hidden" id="section-events">
+    <h2>02 — Your events</h2>
+    <div class="setup-card">
+      <div class="row-head">
+        <span>Title</span><span>Date</span><span>Start</span><span>End</span><span></span>
+      </div>
+      <div id="rows"></div>
+      <div class="gap8">
+        <button class="btn btn-ghost btn-sm" onclick="addRow()">+ Add row</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearRows()">Clear all</button>
+      </div>
+      <hr/>
+      <button class="btn btn-green" onclick="pushToCalendar()">Push to Google Calendar</button>
+    </div>
+  </div>
+
+  <div class="section hidden" id="section-results">
+    <h2>03 — Results</h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-value blue" id="s-total">0</div></div>
+      <div class="stat"><div class="stat-label">Added</div><div class="stat-value green" id="s-ok">0</div></div>
+      <div class="stat"><div class="stat-label">Failed/Skipped</div><div class="stat-value red" id="s-fail">0</div></div>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+    <div id="result-list"></div>
+    <div class="gap8" style="margin-top:1rem;">
+      <button class="btn btn-ghost btn-sm" onclick="resetResults()">Add more events</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+const CAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+let accessToken = null;
+let rowIdx = 0;
+
+function signIn() {
+  const clientId = document.getElementById('client-id').value.trim();
+  if (!clientId) { setMsg('Please paste your Client ID first.', 'warn'); return; }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: window.location.origin + window.location.pathname,
+    response_type: 'token',
+    scope: SCOPES,
+    prompt: 'consent'
+  });
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+  const popup = window.open(authUrl, 'gcal-auth', 'width=500,height=620,left=200,top=100');
+  if (!popup) { setMsg('Popup blocked. Allow popups for this page.', 'warn'); return; }
+  setMsg('Waiting for authorization…', 'info');
+  const timer = setInterval(() => {
+    try {
+      if (popup.closed) { clearInterval(timer); setMsg('Window closed.', 'warn'); return; }
+      const hash = popup.location.hash;
+      if (hash && hash.includes('access_token')) {
+        clearInterval(timer);
+        popup.close();
+        const p = new URLSearchParams(hash.replace('#', ''));
+        accessToken = p.get('access_token');
+        onAuthed(clientId);
+      }
+    } catch(e) {}
+  }, 400);
+}
+
+function onAuthed(clientId) {
+  setStatus(true);
+  setMsg('Connected! Ready to push events.', 'ok');
+  document.getElementById('btn-signout').classList.remove('hidden');
+  document.getElementById('section-events').classList.remove('hidden');
+  localStorage.setItem('gcal_client_id', clientId);
+  if (document.querySelectorAll('.event-row').length === 0) {
+    addRow('Morning workout', fmtDate(new Date()), '06:30', '07:15');
+    addRow('Team standup', fmtDate(new Date()), '09:00', '09:30');
+    addRow('', '', '', '');
+  }
+}
+
+function signOut() {
+  accessToken = null;
+  setStatus(false);
+  document.getElementById('btn-signout').classList.add('hidden');
+  document.getElementById('section-events').classList.add('hidden');
+  document.getElementById('section-results').classList.add('hidden');
+}
+
+function setStatus(live) {
+  document.getElementById('status-dot').className = 'dot' + (live ? ' live' : '');
+  document.getElementById('status-text').textContent = live ? 'connected' : 'not connected';
+}
+
+function setMsg(msg, type) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg;
+  el.style.color = type === 'warn' ? '#f06b5b' : type === 'ok' ? '#3fd6a0' : '#888884';
+}
+
+function fmtDate(d) { return d.toISOString().slice(0, 10); }
+
+function addRow(title='', date='', start='', end='') {
+  const id = rowIdx++;
+  const div = document.createElement('div');
+  div.className = 'event-row';
+  div.id = 'row-' + id;
+  div.innerHTML =
+    '<input type="text" data-f="title" placeholder="Event title" value="' + esc(title) + '" />' +
+    '<input type="date" data-f="date" value="' + (date || fmtDate(new Date())) + '" />' +
+    '<input type="time" data-f="start" value="' + start + '" />' +
+    '<input type="time" data-f="end" value="' + end + '" />' +
+    '<button class="btn btn-danger" onclick="document.getElementById('row-' + id + '').remove()">✕</button>';
+  document.getElementById('rows').appendChild(div);
+}
+
+function clearRows() {
+  document.getElementById('rows').innerHTML = '';
+  addRow();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function parseRows() {
+  return Array.from(document.querySelectorAll('.event-row')).map(row => ({
+    title: row.querySelector('[data-f="title"]').value.trim(),
+    date:  row.querySelector('[data-f="date"]').value.trim(),
+    start: row.querySelector('[data-f="start"]').value.trim(),
+    end:   row.querySelector('[data-f="end"]').value.trim(),
+  }));
+}
+
+function isValidDate(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d)); }
+function isValidTime(t) { return /^\d{2}:\d{2}$/.test(t); }
+function plusHour(t) {
+  const [h, m] = t.split(':').map(Number);
+  const tot = h * 60 + m + 60;
+  return String(Math.floor(tot / 60) % 24).padStart(2, '0') + ':' + String(tot % 60).padStart(2, '0');
+}
+
+async function pushToCalendar() {
+  if (!accessToken) { alert('Please connect your Google account first.'); return; }
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const rows = parseRows();
+  const jobs = [];
+  rows.forEach(r => {
+    if (!r.title || !isValidDate(r.date) || !isValidTime(r.start)) {
+      jobs.push({ ...r, status: 'skip', reason: !r.title ? 'no title' : !isValidDate(r.date) ? 'invalid date' : 'no start time' });
+      return;
+    }
+    const endTime = isValidTime(r.end) ? r.end : plusHour(r.start);
+    jobs.push({ ...r, endTime, autoEnd: !isValidTime(r.end), status: 'pending' });
+  });
+
+  const valid = jobs.filter(j => j.status === 'pending');
+  if (!valid.length) { alert('No valid rows to push.'); return; }
+
+  document.getElementById('section-results').classList.remove('hidden');
+  document.getElementById('result-list').innerHTML = '';
+  document.getElementById('s-total').textContent = jobs.length;
+  document.getElementById('s-ok').textContent = '0';
+  let failCount = jobs.filter(j => j.status === 'skip').length;
+  document.getElementById('s-fail').textContent = failCount;
+  jobs.filter(j => j.status === 'skip').forEach(j => renderResult(j.title || '(empty)', '', 'skip', j.reason, ''));
+
+  let okCount = 0;
+  for (let i = 0; i < valid.length; i++) {
+    setProgress(Math.round((i / valid.length) * 100));
+    const j = valid[i];
+    const body = {
+      summary: j.title,
+      start: { dateTime: j.date + 'T' + j.start + ':00', timeZone: tz },
+      end:   { dateTime: j.date + 'T' + j.endTime + ':00', timeZone: tz }
+    };
+    try {
+      const res = await fetch(CAL_API, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        const ev = await res.json();
+        okCount++;
+        renderResult(j.title, j.date + ' · ' + j.start + '–' + j.endTime, 'ok', j.autoEnd ? 'end +1h auto' : '', ev.htmlLink);
+      } else {
+        const err = await res.json();
+        failCount++;
+        renderResult(j.title, '', 'fail', err.error?.message || 'API error', '');
+      }
+    } catch(e) {
+      failCount++;
+      renderResult(j.title, '', 'fail', 'Network error', '');
+    }
+    document.getElementById('s-ok').textContent = okCount;
+    document.getElementById('s-fail').textContent = failCount;
+  }
+  setProgress(100);
+}
+
+function renderResult(title, time, status, note, link) {
+  const list = document.getElementById('result-list');
+  const div = document.createElement('div');
+  div.className = 'result-item';
+  const badgeClass = status === 'ok' ? 'badge-ok' : status === 'fail' ? 'badge-fail' : 'badge-skip';
+  const badgeText  = status === 'ok' ? 'added' : status === 'fail' ? 'failed' : 'skipped';
+  div.innerHTML =
+    '<div class="result-title">' + esc(title) + '</div>' +
+    (time ? '<div class="result-time">' + time + '</div>' : '') +
+    (note ? '<span class="badge badge-warn">' + note + '</span>' : '') +
+    '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
+    (link ? '<a href="' + link + '" target="_blank" style="font-size:0.75rem;color:var(--accent);text-decoration:none;font-family:var(--mono);">open ↗</a>' : '');
+  list.appendChild(div);
+}
+
+function setProgress(pct) { document.getElementById('prog').style.width = pct + '%'; }
+function resetResults() {
+  document.getElementById('section-results').classList.add('hidden');
+  document.getElementById('result-list').innerHTML = '';
+  setProgress(0);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('gcal_client_id');
+  if (saved) document.getElementById('client-id').value = saved;
+  addRow();
+});
+</script>
+</body>
+</html>
