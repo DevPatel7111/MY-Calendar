@@ -195,7 +195,7 @@ function signIn() {
   localStorage.setItem('gcal_client_id', clientId);
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: window.location.origin + window.location.pathname,
+    redirect_uri: 'https://devpatel7111.github.io/MY-Calendar/',
     response_type: 'token',
     scope: SCOPES,
     prompt: 'consent'
